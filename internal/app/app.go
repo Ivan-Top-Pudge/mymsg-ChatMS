@@ -2,6 +2,7 @@ package app
 
 import (
 	grpcapp "chat/internal/app/grpc"
+	chatservice "chat/internal/services/chat"
 	"log/slog"
 	"time"
 )
@@ -19,7 +20,8 @@ func New(
 	// TODO: init storage
 
 	// TODO: init chat service
-	grpcApp := grpcapp.New(log, grpcPort)
+	chatService := chatservice.New(log)
+	grpcApp := grpcapp.New(log, chatService, grpcPort)
 	return &App{
 		GRPCSrv: grpcApp,
 	}

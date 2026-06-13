@@ -1,10 +1,12 @@
 package chat
 
 import (
+	"chat/internal/domain/models"
 	"context"
 	"log/slog"
 )
 
+// Структура сервиса Chat с бизнес логикой
 type Chat struct {
 	log             *slog.Logger
 	chatSaver       ChatSaver
@@ -13,8 +15,10 @@ type Chat struct {
 	messageProvider MessageProvider
 }
 
+// Интерфейсы для логики storage`а
+
 type ChatSaver interface {
-	SaveChat(ctx context.Context, members []int64) (int64, error)
+	CreateChat(ctx context.Context, members []int64) (int64, error)
 	DeleteChat(ctx context.Context, chatID int64) error
 }
 
@@ -28,9 +32,10 @@ type MessageSaver interface {
 }
 
 type MessageProvider interface {
-	//TODO: GetHistory()
+	GetHistory(ctx context.Context, chatID int64, limit int64, offset int64) ([]models.Message, error)
 }
 
+// New создаёт новую сущность Сервиса Chat
 func New(
 	log *slog.Logger,
 	chatSaver ChatSaver,
@@ -45,4 +50,73 @@ func New(
 		messageSaver:    messageSaver,
 		messageProvider: messageProvider,
 	}
+}
+
+// Реализация функций Бизнес-логики микросервиса
+
+// CreateChat реализует бизнес логику создания чата
+func (c *Chat) CreateChat(ctx context.Context, members []int64) (int64, error) {
+	const op = "chat.CreateChat"
+
+	c.log.With(slog.String("op", op)).Info("creating new chat")
+	// TODO: проверка SSO
+
+	chatID, err := c.chatSaver.CreateChat(ctx, members)
+	if err != nil {
+		c.log.Error("failed to save chat to db", slog.String("error", err.Error()))
+		return 0, err
+	}
+	return chatID, nil
+}
+
+// DeleteChat deletes a chat with given chatID (business logic)
+func (c *Chat) DeleteChat(ctx context.Context, chatID int64) error {
+	const op = "chat.DeleteChat"
+	c.log.With(slog.String("op", op)).Info("deleting a chat")
+	// TODO: проверка SSO
+
+	err := c.chatSaver.DeleteChat(ctx, chatID)
+	if err != nil {
+		c.log.Error("failed to delete chat", slog.String("error", err.Error()))
+		return err
+	}
+	return nil
+}
+
+// SendMessage creates a new message in chat with chatID
+func (c *Chat) SendMessage(ctx context.Context, chatID int64, senderID int64, text string) (int64, error) {
+	const op = "chat.SendMessage"
+	// TODO: SSO
+
+	msgID, err := c.messageSaver.SaveMessage(ctx, chatID, senderID, text)
+	if err != nil {
+		c.log.Error("failed to send message", slog.String("error", err.Error()))
+		return 0, err
+	}
+	return msgID, nil
+}
+
+// DeleteMessage deletes the message with msgID in chat with chatID
+func (c *Chat) DeleteMessage(ctx context.Context, msgID int64, chatID int64) error {
+	const op = "chat.DeleteMessage"
+	// TODO: SSO
+
+	err := c.messageSaver.DeleteMessage(ctx, msgID, chatID)
+	if err != nil {
+		c.log.Error("failed to delete message", slog.String("error", err.Error()))
+		return err
+	}
+	return nil
+}
+
+func (c *Chat) GetChatHistory(ctx context.Context, chatID int64, limit int64, offset int64) ([]models.Message, error) {
+	const op = "chat.GetChatHistory"
+	// TODO: SSO
+
+	messages, err := c.messageProvider.GetHistory(ctx, chatID, limit, offset)
+	if err != nil {
+		c.log.Error("failed to delete message", slog.String("error", err.Error()))
+		return nil, err
+	}
+	return messages, nil
 }

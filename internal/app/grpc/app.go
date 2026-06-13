@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"net"
 
-	//chatgrpc "chat/internal/grpc/chat"
+	chatgrpc "chat/internal/grpc/chat"
 
 	"google.golang.org/grpc"
 )
@@ -18,12 +18,12 @@ type App struct {
 
 func New(
 	log *slog.Logger,
-	// TODO: chatService chatgrpc.Chat,
+	chatService chatgrpc.Chat,
 	port int,
 ) *App {
 	gRPCServer := grpc.NewServer()
 
-	//chatgrpc.Register(gRPCServer, chatService)
+	chatgrpc.Register(gRPCServer, chatService)
 	return &App{
 		log:        log,
 		gRPCServer: gRPCServer,

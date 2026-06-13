@@ -109,13 +109,14 @@ func (c *Chat) DeleteMessage(ctx context.Context, msgID int64, chatID int64) err
 	return nil
 }
 
+// GetChatHistory return array of messages from chat with chatID using limit and offset
 func (c *Chat) GetChatHistory(ctx context.Context, chatID int64, limit int64, offset int64) ([]models.Message, error) {
 	const op = "chat.GetChatHistory"
 	// TODO: SSO
 
 	messages, err := c.messageProvider.GetHistory(ctx, chatID, limit, offset)
 	if err != nil {
-		c.log.Error("failed to delete message", slog.String("error", err.Error()))
+		c.log.Error("failed to get history", slog.String("error", err.Error()))
 		return nil, err
 	}
 	return messages, nil

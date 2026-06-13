@@ -9,7 +9,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-// Это интерфейс для функций бизнес логики
+// Это интерфейс для функций бизнес логики, который описывает контракт для gRPC
 type Chat interface {
 	CreateChat(ctx context.Context, members []int64) (int64, error)
 	DeleteChat(ctx context.Context, chatID int64) error

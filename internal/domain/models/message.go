@@ -5,7 +5,7 @@ import "time"
 type Message struct {
 	ID        int64
 	ChatID    int64
-	senderID  int64
-	text      string
+	SenderID  int64
+	Text      string
 	CreatedAt time.Time
 }

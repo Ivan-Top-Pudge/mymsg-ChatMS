@@ -1,5 +1,7 @@
 version: "3"
 
+dotenv: ['.env']
+
 tasks:
   run:
     desc: "Run Chat service"
@@ -10,3 +12,13 @@ tasks:
     desc: "default runs the Chat service"
     cmds:
       - task: run
+  
+  migrate-up:
+    desc: "Apply database migrations using custom Go migrator"
+    cmds:
+      - go run cmd/migrator/main.go -db-url="{{.MIGRATOR_DB_URL}}" -migrations-path="./migrations" -action="up"
+
+  migrate-down:
+    desc: "Rollback database migrations using custom Go migrator"
+    cmds:
+      - go run cmd/migrator/main.go -db-url="{{.MIGRATOR_DB_URL}}" -migrations-path="./migrations" -action="down"

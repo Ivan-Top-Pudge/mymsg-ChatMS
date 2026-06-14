@@ -5,6 +5,8 @@ import (
 	"chat/internal/config"
 	"log/slog"
 	"os"
+	"os/signal"
+	"syscall"
 )
 
 const (
@@ -26,7 +28,17 @@ func main() {
 
 	application := app.New(log, cfg.GRPC.Port, cfg.PostgresDSN)
 
-	application.GRPCSrv.MustRun()
+	go application.GRPCSrv.MustRun()
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
+
+	// main будет висеть в этой строчке, пока не придёт сигнал
+	// в это время горутина GRPCSrv.MustRun() обрабатывает запросы
+	signal := <-stop
+	log.Info("stopping application", slog.String("signal", signal.String()))
+	application.GRPCSrv.Stop()
+	log.Info("application stopped")
 
 }
 

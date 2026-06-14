@@ -1,0 +1,12 @@
+version: "3"
+
+tasks:
+  run:
+    desc: "Run Chat service"
+    cmds:
+      - go run cmd/chat/main.go --config=./config/local.yaml
+      
+  default:
+    desc: "default runs the Chat service"
+    cmds:
+      - task: run

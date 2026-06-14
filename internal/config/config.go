@@ -9,10 +9,9 @@ import (
 )
 
 type Config struct {
-	Env         string        `yaml:"env" env-default:"local"`
-	StoragePath string        `yaml:"storage_path" env-required:"./data"`
-	TokenTTL    time.Duration `yaml:"token_ttl" env-required:"true"`
-	GRPC        GRPCConfig    `yaml:"grpc"`
+	Env         string     `yaml:"env" env-default:"local"`
+	PostgresDSN string     `yaml:"postgres_dsn" env-required:"./data"`
+	GRPC        GRPCConfig `yaml:"grpc"`
 }
 
 type GRPCConfig struct {

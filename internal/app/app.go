@@ -19,8 +19,7 @@ func New(
 ) *App {
 	// TODO: init storage
 
-	// TODO: init chat service
-	chatService := chatservice.New(log)
+	chatService := chatservice.New(log) // need storage
 	grpcApp := grpcapp.New(log, chatService, grpcPort)
 	return &App{
 		GRPCSrv: grpcApp,

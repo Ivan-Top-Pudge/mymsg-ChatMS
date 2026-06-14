@@ -13,6 +13,7 @@ import (
 
 type App struct {
 	GRPCSrv *grpcapp.App
+	closers []func()
 }
 
 func New(
@@ -27,8 +28,26 @@ func New(
 
 	chatService := chatservice.New(log, storage, storage, storage, storage) // need storage
 	grpcApp := grpcapp.New(log, chatService, grpcPort)
-	return &App{
+
+	app := &App{
 		GRPCSrv: grpcApp,
+	}
+
+	app.closers = append(app.closers, func() {
+		log.Info("closing postgres connection pool")
+		pool.Close()
+	})
+	return app
+}
+
+// Stop stops all procesess and closes connections
+func (a *App) Stop() {
+	// Stop grpc requests
+	a.GRPCSrv.Stop()
+
+	// close all resources in reverse order (LIFO)
+	for i := len(a.closers) - 1; i >= 0; i-- {
+		a.closers[i]()
 	}
 }
 

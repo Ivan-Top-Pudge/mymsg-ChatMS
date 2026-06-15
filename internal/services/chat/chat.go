@@ -3,6 +3,7 @@ package chat
 import (
 	"chat/internal/domain/models"
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 )
@@ -60,14 +61,18 @@ func New(
 	}
 }
 
+var (
+	ErrUserNotFound = errors.New("user does not exist")
+)
+
 // Реализация функций Бизнес-логики микросервиса
 
 // CreateChat реализует бизнес логику создания чата
 func (c *Chat) CreateChat(ctx context.Context, members []int64) (int64, error) {
 	const op = "chat.CreateChat"
 
+	// Check if members are valid
 	c.log.With(slog.String("op", op)).Info("creating new chat")
-	// TODO: проверка SSO
 	for _, memberID := range members {
 		exists, err := c.ssoProvider.IsUserExists(ctx, memberID)
 		if err != nil {
@@ -81,7 +86,7 @@ func (c *Chat) CreateChat(ctx context.Context, members []int64) (int64, error) {
 
 		if !exists {
 			c.log.Warn("attempt to create chat with non-existent user", slog.Int64("user_id", memberID))
-			return 0, fmt.Errorf("%s: user %d does not exist", op, memberID)
+			return 0, fmt.Errorf("user %d: %w", memberID, ErrUserNotFound)
 		}
 	}
 

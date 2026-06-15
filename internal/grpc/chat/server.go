@@ -2,8 +2,10 @@ package chat
 
 import (
 	"context"
+	"errors"
 
 	"chat/internal/domain/models"
+	chatservice "chat/internal/services/chat"
 
 	chatv1 "github.com/Ivan-Top-Pudge/mymsg-protos/gen/go/chat"
 	"google.golang.org/grpc"
@@ -43,6 +45,9 @@ func (s *serverAPI) CreateChat(
 
 	chatID, err := s.chat.CreateChat(ctx, req.Members)
 	if err != nil {
+		if errors.Is(err, chatservice.ErrUserNotFound) {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
 		return nil, status.Error(codes.Internal, "internal error")
 	}
 

@@ -4,6 +4,8 @@ github.com/BurntSushi/toml v1.2.1 h1:9F2/+DoOYIOksmaJFPw1tGFy1eDnIJXg+UHjuD8lTak
 github.com/BurntSushi/toml v1.2.1/go.mod h1:CxXYINrC8qIiEnFrOxCa7Jy5BFHlXnUU2pbicEuybxQ=
 github.com/Ivan-Top-Pudge/mymsg-protos v0.0.1 h1:GndWhISBZcaCym5A9USeJzWxzBHbzGMYQK7POVqil+c=
 github.com/Ivan-Top-Pudge/mymsg-protos v0.0.1/go.mod h1:b05wn3mPqMb5DBDnFvFvC9pgaW+9OXzzuGoH8/3I4Bw=
+github.com/Ivan-Top-Pudge/protos v0.0.3 h1:1lxJZ2GRslgHao1fX4pxTf2bYwTz0QOpOFo2c4u1SL8=
+github.com/Ivan-Top-Pudge/protos v0.0.3/go.mod h1:lQEjpvdJa8d3c9kbIa4SP1QQzruP8CU07X9z7SZiN2I=
 github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERoyfY=
 github.com/Microsoft/go-winio v0.6.2/go.mod h1:yd8OoFMLzJbo9gZq8j5qaps8bJ9aShtEA8Ipt1oGCvU=
 github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=

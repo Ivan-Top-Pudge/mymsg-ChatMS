@@ -2,9 +2,11 @@ package app
 
 import (
 	grpcapp "chat/internal/app/grpc"
+	ssogrpc "chat/internal/clients/sso/grpc"
 	chatservice "chat/internal/services/chat"
 	"chat/internal/storage/postgres"
 	"context"
+	"time"
 
 	"log/slog"
 
@@ -20,13 +22,26 @@ func New(
 	log *slog.Logger,
 	grpcPort int,
 	postgresDSN string,
+	ssoAddr string,
 ) *App {
 	ctx := context.Background()
 	pool := MustSetupPostgres(ctx, postgresDSN)
 
 	storage := postgres.New(pool)
 
-	chatService := chatservice.New(log, storage, storage, storage, storage) // need storage
+	ssoClient, err := ssogrpc.New(log, ssoAddr, 5*time.Second)
+	if err != nil {
+		log.Error("failed to init sso client", slog.Any("error", err))
+		panic(err)
+	}
+
+	chatService := chatservice.New(log,
+		storage,
+		storage,
+		storage,
+		storage,
+		ssoClient,
+	) // need storage
 	grpcApp := grpcapp.New(log, chatService, grpcPort)
 
 	app := &App{

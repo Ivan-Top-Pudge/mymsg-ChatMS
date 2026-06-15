@@ -26,7 +26,7 @@ func main() {
 			cfg.GRPC.Port),
 	)
 
-	application := app.New(log, cfg.GRPC.Port, cfg.PostgresDSN)
+	application := app.New(log, cfg.GRPC.Port, cfg.PostgresDSN, cfg.SSOAddr)
 
 	go application.GRPCSrv.MustRun()
 

@@ -12,6 +12,7 @@ type Config struct {
 	Env         string     `yaml:"env" env-default:"local"`
 	PostgresDSN string     `yaml:"postgres_dsn" env-required:"./data"`
 	GRPC        GRPCConfig `yaml:"grpc"`
+	SSOAddr     string     `yaml:"sso_address"`
 }
 
 type GRPCConfig struct {

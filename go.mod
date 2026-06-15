@@ -4,6 +4,7 @@ go 1.26.0
 
 require (
 	github.com/Ivan-Top-Pudge/mymsg-protos v0.0.1
+	github.com/Ivan-Top-Pudge/protos v0.0.3
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/jackc/pgx/v5 v5.10.0
 	google.golang.org/grpc v1.81.1

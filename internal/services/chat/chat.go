@@ -3,6 +3,7 @@ package chat
 import (
 	"chat/internal/domain/models"
 	"context"
+	"fmt"
 	"log/slog"
 )
 
@@ -13,6 +14,11 @@ type Chat struct {
 	chatProvider    ChatProvider
 	messageSaver    MessageSaver
 	messageProvider MessageProvider
+	ssoProvider     SSOProvider
+}
+
+type SSOProvider interface {
+	IsUserExists(ctx context.Context, userID int64) (bool, error)
 }
 
 // Интерфейсы для логики storage`а
@@ -42,6 +48,7 @@ func New(
 	chatProvider ChatProvider,
 	messageSaver MessageSaver,
 	messageProvider MessageProvider,
+	ssoProvider SSOProvider,
 ) *Chat {
 	return &Chat{
 		log:             log,
@@ -49,6 +56,7 @@ func New(
 		chatProvider:    chatProvider,
 		messageSaver:    messageSaver,
 		messageProvider: messageProvider,
+		ssoProvider:     ssoProvider,
 	}
 }
 
@@ -60,6 +68,22 @@ func (c *Chat) CreateChat(ctx context.Context, members []int64) (int64, error) {
 
 	c.log.With(slog.String("op", op)).Info("creating new chat")
 	// TODO: проверка SSO
+	for _, memberID := range members {
+		exists, err := c.ssoProvider.IsUserExists(ctx, memberID)
+		if err != nil {
+			c.log.With(slog.String("op", op)).Error(
+				"failed to check user existence in sso",
+				slog.Int64("user_id", memberID),
+				slog.Any("error", err),
+			)
+			return 0, fmt.Errorf("%s: failed to validate member %d: %w", op, memberID, err)
+		}
+
+		if !exists {
+			c.log.Warn("attempt to create chat with non-existent user", slog.Int64("user_id", memberID))
+			return 0, fmt.Errorf("%s: user %d does not exist", op, memberID)
+		}
+	}
 
 	chatID, err := c.chatSaver.CreateChat(ctx, members)
 	if err != nil {

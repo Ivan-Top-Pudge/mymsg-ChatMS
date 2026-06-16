@@ -23,6 +23,7 @@ func New(
 	grpcPort int,
 	postgresDSN string,
 	ssoAddr string,
+	jwtSecret string,
 ) *App {
 	ctx := context.Background()
 	pool := MustSetupPostgres(ctx, postgresDSN)
@@ -42,7 +43,7 @@ func New(
 		storage,
 		ssoClient,
 	) // need storage
-	grpcApp := grpcapp.New(log, chatService, grpcPort)
+	grpcApp := grpcapp.New(log, chatService, grpcPort, jwtSecret)
 
 	app := &App{
 		GRPCSrv: grpcApp,

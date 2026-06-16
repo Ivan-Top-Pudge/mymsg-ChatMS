@@ -70,7 +70,25 @@ func (s *Storage) ChatExists(ctx context.Context, chatID int64) (bool, error) {
 }
 
 func (s *Storage) SaveMessage(ctx context.Context, chatID int64, senderID int64, text string) (int64, error) {
-	panic("Imlement me")
+	const op = "storage.postgres.SaveMessage"
+
+	// SQL запрос с возвратом сгенерированного ID
+	query := `
+		INSERT INTO messages (chat_id, sender_id, text)
+		VALUES ($1, $2, $3)
+		RETURNING id;
+	`
+
+	var msgID int64
+
+	// Выполняем запрос и сразу читаем возвращенный id
+	err := s.pool.QueryRow(ctx, query, chatID, senderID, text).Scan(&msgID)
+	if err != nil {
+		// Обертка ошибки для понимания, где именно она произошла
+		return 0, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return msgID, nil
 }
 
 func (s *Storage) DeleteMessage(ctx context.Context, msgID int64, chatID int64) error {

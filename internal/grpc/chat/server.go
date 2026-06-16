@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"chat/internal/delivery/grpc/interceptors"
 	"chat/internal/domain/models"
 	chatservice "chat/internal/services/chat"
 
@@ -115,11 +116,16 @@ func (s *serverAPI) SendMessage(
 	ctx context.Context,
 	req *chatv1.SendMessageRequest,
 ) (*chatv1.SendMessageResponse, error) {
+	senderID, ok := interceptors.UserIDFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Internal, "failed to get user id from context")
+	}
+
 	if err := validateSendMessage(req); err != nil {
 		return nil, err
 	}
 
-	msgID, err := s.chat.SendMessage(ctx, req.ChatId, req.SenderId, req.Text)
+	msgID, err := s.chat.SendMessage(ctx, req.ChatId, senderID, req.Text)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "internal error")
 	}
@@ -156,9 +162,6 @@ func validateDeleteMessage(req *chatv1.DeleteMessageRequest) error {
 func validateSendMessage(req *chatv1.SendMessageRequest) error {
 	if req.ChatId <= 0 {
 		return status.Error(codes.InvalidArgument, "invalid chat id")
-	}
-	if req.SenderId <= 0 {
-		return status.Error(codes.InvalidArgument, "invalid sender id")
 	}
 	if req.Text == "" {
 		return status.Error(codes.InvalidArgument, "message text cannot be empty")

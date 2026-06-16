@@ -13,6 +13,7 @@ type Config struct {
 	PostgresDSN string     `yaml:"postgres_dsn" env-required:"./data"`
 	GRPC        GRPCConfig `yaml:"grpc"`
 	SSOAddr     string     `yaml:"sso_address"`
+	JWTSecret   string     `yaml:"jwt_secret"`
 }
 
 type GRPCConfig struct {

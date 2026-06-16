@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net"
 
+	"chat/internal/delivery/grpc/interceptors"
 	chatgrpc "chat/internal/grpc/chat"
 
 	"google.golang.org/grpc"
@@ -20,8 +21,13 @@ func New(
 	log *slog.Logger,
 	chatService chatgrpc.Chat,
 	port int,
+	jwtSecret string,
 ) *App {
-	gRPCServer := grpc.NewServer()
+	authInterceptor := interceptors.AuthInterceptor(jwtSecret)
+
+	gRPCServer := grpc.NewServer(
+		grpc.UnaryInterceptor(authInterceptor),
+	)
 
 	chatgrpc.Register(gRPCServer, chatService)
 	return &App{

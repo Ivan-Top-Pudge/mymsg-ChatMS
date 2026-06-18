@@ -95,6 +95,7 @@ func (s *Storage) ChatExists(ctx context.Context, chatID int64) (bool, error) {
 	return exists, nil
 }
 
+// SaveMessage saves message in db and returns its id
 func (s *Storage) SaveMessage(ctx context.Context, chatID int64, senderID int64, text string) (int64, error) {
 	const op = "storage.postgres.SaveMessage"
 
@@ -117,6 +118,7 @@ func (s *Storage) SaveMessage(ctx context.Context, chatID int64, senderID int64,
 	return msgID, nil
 }
 
+// DeleteMessage deletes message in db
 func (s *Storage) DeleteMessage(ctx context.Context, msgID int64, chatID int64) error {
 	const op = "storage.postgres.DeleteMessage"
 
@@ -137,6 +139,7 @@ func (s *Storage) DeleteMessage(ctx context.Context, msgID int64, chatID int64) 
 	return nil
 }
 
+// GetHistory returns an array of messages from chat with pagination
 func (s *Storage) GetHistory(ctx context.Context, chatID int64, limit int64, offset int64) ([]models.Message, error) {
 	const op = "storage.postgres.GetHistory"
 
@@ -171,6 +174,7 @@ func (s *Storage) GetHistory(ctx context.Context, chatID int64, limit int64, off
 	return messages, nil
 }
 
+// GetMessage returns message from chat
 func (s *Storage) GetMessage(ctx context.Context, chatID int64, msgID int64) (models.Message, error) {
 	const op = "storage.postgres.GetMessage"
 
@@ -190,6 +194,7 @@ func (s *Storage) GetMessage(ctx context.Context, chatID int64, msgID int64) (mo
 	return msg, nil
 }
 
+// ChatMembers returns slice of chat member ids
 func (s *Storage) ChatMembers(ctx context.Context, chatID int64) ([]int64, error) {
 	const op = "storage.postgres.ChatMembers"
 

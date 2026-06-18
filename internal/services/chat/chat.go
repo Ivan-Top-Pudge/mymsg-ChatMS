@@ -183,6 +183,7 @@ func (c *Chat) GetChatHistory(ctx context.Context, chatID int64, requestorID int
 	return messages, nil
 }
 
+// canAccess checks if user is in allowedUsers
 func canAccess(allowedUsers []int64, user int64) bool {
 	return slices.Contains(allowedUsers, user)
 }

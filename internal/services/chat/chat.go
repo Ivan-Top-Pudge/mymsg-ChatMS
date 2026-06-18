@@ -23,7 +23,8 @@ type SSOProvider interface {
 }
 
 // Интерфейсы для логики storage`а
-
+//
+//go:generate mockgen -source=chat.go -destination=mocks/mock_chat.go -package=mocks
 type ChatSaver interface {
 	CreateChat(ctx context.Context, members []int64) (int64, error)
 	DeleteChat(ctx context.Context, chatID int64) error

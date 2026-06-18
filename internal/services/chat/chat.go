@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"slices"
 )
 
 // Структура сервиса Chat с бизнес логикой
@@ -32,7 +31,7 @@ type ChatSaver interface {
 
 type ChatProvider interface {
 	ChatExists(ctx context.Context, chatID int64) (bool, error)
-	ChatMembers(ctx context.Context, chatID int64) ([]int64, error)
+	IsChatMember(ctx context.Context, chatID int64, requestorID int64) (bool, error)
 }
 
 type MessageSaver interface {
@@ -164,13 +163,13 @@ func (c *Chat) DeleteMessage(ctx context.Context, msgID int64, chatID int64, req
 func (c *Chat) GetChatHistory(ctx context.Context, chatID int64, requestorID int64, limit int64, offset int64) ([]models.Message, error) {
 	const op = "chat.GetChatHistory"
 
-	members, err := c.chatProvider.ChatMembers(ctx, chatID)
+	isMember, err := c.chatProvider.IsChatMember(ctx, chatID, requestorID)
 	if err != nil {
 		c.log.Error("failed to get chat", slog.String("error", err.Error()))
 		return nil, err
 	}
 
-	if !canAccess(members, requestorID) {
+	if !isMember {
 		c.log.Warn("permission denied: requestor is not in the chat")
 		return nil, fmt.Errorf("%s: %w", op, ErrPermissionDenied)
 	}
@@ -181,9 +180,4 @@ func (c *Chat) GetChatHistory(ctx context.Context, chatID int64, requestorID int
 		return nil, err
 	}
 	return messages, nil
-}
-
-// canAccess checks if user is in allowedUsers
-func canAccess(allowedUsers []int64, user int64) bool {
-	return slices.Contains(allowedUsers, user)
 }

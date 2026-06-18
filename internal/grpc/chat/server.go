@@ -22,7 +22,7 @@ type Chat interface {
 	SendMessage(ctx context.Context, chatID int64, senderID int64, text string) (int64, error)
 	DeleteMessage(ctx context.Context, msgID int64, chatID int64, requestorID int64) error
 
-	GetChatHistory(ctx context.Context, chatID int64, limit int64, offset int64) ([]models.Message, error)
+	GetChatHistory(ctx context.Context, chatID int64, requestorID int64, limit int64, offset int64) ([]models.Message, error)
 }
 
 type serverAPI struct {
@@ -72,11 +72,16 @@ func (s *serverAPI) GetChatHistory(
 	ctx context.Context,
 	req *chatv1.GetChatHistoryRequest,
 ) (*chatv1.GetChatHistoryResponse, error) {
+	requestorID, ok := interceptors.UserIDFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "failed to get user id from context")
+	}
+
 	if err := validateGetChatHistory(req); err != nil {
 		return nil, err
 	}
 
-	messages, err := s.chat.GetChatHistory(ctx, req.ChatId, req.Limit, req.Offset)
+	messages, err := s.chat.GetChatHistory(ctx, req.ChatId, requestorID, req.Limit, req.Offset)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "internal error")
 	}
@@ -121,13 +126,13 @@ func (s *serverAPI) DeleteMessage(
 	ctx context.Context,
 	req *chatv1.DeleteMessageRequest,
 ) (*chatv1.DeleteMessageResponse, error) {
-	if err := validateDeleteMessage(req); err != nil {
-		return nil, err
-	}
-
 	requestorID, ok := interceptors.UserIDFromContext(ctx)
 	if !ok {
 		return nil, status.Error(codes.Unauthenticated, "failed to get user id from context")
+	}
+
+	if err := validateDeleteMessage(req); err != nil {
+		return nil, err
 	}
 
 	err := s.chat.DeleteMessage(ctx, req.MsgId, req.ChatId, requestorID)

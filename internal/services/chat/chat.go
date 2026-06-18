@@ -31,6 +31,7 @@ type ChatSaver interface {
 
 type ChatProvider interface {
 	ChatExists(ctx context.Context, chatID int64) (bool, error)
+	ChatMembers(ctx context.Context, chatID int64) ([]int64, error)
 }
 
 type MessageSaver interface {
@@ -159,9 +160,20 @@ func (c *Chat) DeleteMessage(ctx context.Context, msgID int64, chatID int64, req
 }
 
 // GetChatHistory return array of messages from chat with chatID using limit and offset
-func (c *Chat) GetChatHistory(ctx context.Context, chatID int64, limit int64, offset int64) ([]models.Message, error) {
+func (c *Chat) GetChatHistory(ctx context.Context, chatID int64, requestorID int64, limit int64, offset int64) ([]models.Message, error) {
 	const op = "chat.GetChatHistory"
 	// TODO: SSO
+
+	members, err := c.chatProvider.ChatMembers(ctx, chatID)
+	if err != nil {
+		c.log.Error("failed to get chat", slog.String("error", err.Error()))
+		return nil, err
+	}
+
+	if !canAccess(members, requestorID) {
+		c.log.Warn("permission denied: requestor is not in the chat")
+		return nil, fmt.Errorf("%s: %w", op, ErrPermissionDenied)
+	}
 
 	messages, err := c.messageProvider.GetHistory(ctx, chatID, limit, offset)
 	if err != nil {
@@ -169,4 +181,13 @@ func (c *Chat) GetChatHistory(ctx context.Context, chatID int64, limit int64, of
 		return nil, err
 	}
 	return messages, nil
+}
+
+func canAccess(allowedUsers []int64, user int64) bool {
+	for _, id := range allowedUsers {
+		if id == user {
+			return true
+		}
+	}
+	return false
 }

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 )
 
 // Структура сервиса Chat с бизнес логикой
@@ -162,7 +163,6 @@ func (c *Chat) DeleteMessage(ctx context.Context, msgID int64, chatID int64, req
 // GetChatHistory return array of messages from chat with chatID using limit and offset
 func (c *Chat) GetChatHistory(ctx context.Context, chatID int64, requestorID int64, limit int64, offset int64) ([]models.Message, error) {
 	const op = "chat.GetChatHistory"
-	// TODO: SSO
 
 	members, err := c.chatProvider.ChatMembers(ctx, chatID)
 	if err != nil {
@@ -184,10 +184,5 @@ func (c *Chat) GetChatHistory(ctx context.Context, chatID int64, requestorID int
 }
 
 func canAccess(allowedUsers []int64, user int64) bool {
-	for _, id := range allowedUsers {
-		if id == user {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(allowedUsers, user)
 }

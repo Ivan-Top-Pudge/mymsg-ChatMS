@@ -189,3 +189,34 @@ func (s *Storage) GetMessage(ctx context.Context, chatID int64, msgID int64) (mo
 
 	return msg, nil
 }
+
+func (s *Storage) ChatMembers(ctx context.Context, chatID int64) ([]int64, error) {
+	const op = "storage.postgres.ChatMembers"
+
+	query := `
+		SELECT user_id FROM chat_members
+		WHERE chat_id = $1
+	`
+
+	rows, err := s.pool.Query(ctx, query, chatID)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+	defer rows.Close()
+
+	members := make([]int64, 0)
+	var user_id int64
+	for rows.Next() {
+		err := rows.Scan(&user_id)
+		if err != nil {
+			return nil, fmt.Errorf("%s: failed to scan message: %w", op, err)
+		}
+		members = append(members, user_id)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("%s: rows iteration error: %w", op, err)
+	}
+
+	return members, nil
+}

@@ -170,3 +170,22 @@ func (s *Storage) GetHistory(ctx context.Context, chatID int64, limit int64, off
 
 	return messages, nil
 }
+
+func (s *Storage) GetMessage(ctx context.Context, chatID int64, msgID int64) (models.Message, error) {
+	const op = "storage.postgres.GetMessage"
+
+	query := `
+	SELECT id, chat_id, sender_id, text, created_at
+	FROM messages
+	WHERE chat_id = $1 AND id = $2
+	`
+
+	var msg models.Message
+
+	err := s.pool.QueryRow(ctx, query, chatID, msgID).Scan(&msg.ID, &msg.ChatID, &msg.SenderID, &msg.Text, &msg.CreatedAt)
+	if err != nil {
+		return models.Message{}, fmt.Errorf("%s: failed to scan message: %w", op, err)
+	}
+
+	return msg, nil
+}

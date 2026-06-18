@@ -40,6 +40,7 @@ type MessageSaver interface {
 
 type MessageProvider interface {
 	GetHistory(ctx context.Context, chatID int64, limit int64, offset int64) ([]models.Message, error)
+	GetMessage(ctx context.Context, chatID int64, msgID int64) (models.Message, error)
 }
 
 // New создаёт новую сущность Сервиса Chat
@@ -62,7 +63,8 @@ func New(
 }
 
 var (
-	ErrUserNotFound = errors.New("user does not exist")
+	ErrUserNotFound     = errors.New("user does not exist")
+	ErrPermissionDenied = errors.New("permission denied")
 )
 
 // Реализация функций Бизнес-логики микросервиса
@@ -102,7 +104,6 @@ func (c *Chat) CreateChat(ctx context.Context, members []int64) (int64, error) {
 func (c *Chat) DeleteChat(ctx context.Context, chatID int64) error {
 	const op = "chat.DeleteChat"
 	c.log.With(slog.String("op", op)).Info("deleting a chat")
-	// TODO: проверка SSO
 
 	err := c.chatSaver.DeleteChat(ctx, chatID)
 	if err != nil {
@@ -113,9 +114,9 @@ func (c *Chat) DeleteChat(ctx context.Context, chatID int64) error {
 }
 
 // SendMessage creates a new message in chat with chatID
+// senderID is validated on gRPC level
 func (c *Chat) SendMessage(ctx context.Context, chatID int64, senderID int64, text string) (int64, error) {
 	const op = "chat.SendMessage"
-	// TODO: SSO
 
 	msgID, err := c.messageSaver.SaveMessage(ctx, chatID, senderID, text)
 	if err != nil {
@@ -126,14 +127,33 @@ func (c *Chat) SendMessage(ctx context.Context, chatID int64, senderID int64, te
 }
 
 // DeleteMessage deletes the message with msgID in chat with chatID
-func (c *Chat) DeleteMessage(ctx context.Context, msgID int64, chatID int64) error {
+func (c *Chat) DeleteMessage(ctx context.Context, msgID int64, chatID int64, requestorID int64) error {
 	const op = "chat.DeleteMessage"
-	// TODO: SSO
 
-	err := c.messageSaver.DeleteMessage(ctx, msgID, chatID)
+	log := c.log.With(
+		slog.String("op", op),
+		slog.Int64("msg_id", msgID),
+		slog.Int64("chat_id", chatID),
+		slog.Int64("requestor_id", requestorID),
+	)
+
+	msg, err := c.messageProvider.GetMessage(ctx, chatID, msgID)
 	if err != nil {
-		c.log.Error("failed to delete message", slog.String("error", err.Error()))
-		return err
+		log.Error("failed to get message", slog.String("error", err.Error()))
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	if msg.SenderID != requestorID {
+		log.Warn("permission denied: requestor is not the sender",
+			slog.Int64("actual_sender_id", msg.SenderID),
+		)
+		return fmt.Errorf("%s: %w", op, ErrPermissionDenied)
+	}
+
+	err = c.messageSaver.DeleteMessage(ctx, msgID, chatID)
+	if err != nil {
+		log.Error("failed to delete message", slog.String("error", err.Error()))
+		return fmt.Errorf("%s: %w", op, err)
 	}
 	return nil
 }

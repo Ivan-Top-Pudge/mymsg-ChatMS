@@ -20,7 +20,7 @@ type Chat interface {
 	DeleteChat(ctx context.Context, chatID int64) error
 
 	SendMessage(ctx context.Context, chatID int64, senderID int64, text string) (int64, error)
-	DeleteMessage(ctx context.Context, msgID int64, chatID int64) error
+	DeleteMessage(ctx context.Context, msgID int64, chatID int64, requestorID int64) error
 
 	GetChatHistory(ctx context.Context, chatID int64, limit int64, offset int64) ([]models.Message, error)
 }
@@ -68,22 +68,6 @@ func (s *serverAPI) DeleteChat(ctx context.Context, req *chatv1.DeleteChatReques
 	return &chatv1.DeleteChatResponse{DeletedChatId: req.ChatId}, nil
 }
 
-func (s *serverAPI) DeleteMessage(
-	ctx context.Context,
-	req *chatv1.DeleteMessageRequest,
-) (*chatv1.DeleteMessageResponse, error) {
-	if err := validateDeleteMessage(req); err != nil {
-		return nil, err
-	}
-
-	err := s.chat.DeleteMessage(ctx, req.MsgId, req.ChatId)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "internal error")
-	}
-
-	return &chatv1.DeleteMessageResponse{Success: true}, nil
-}
-
 func (s *serverAPI) GetChatHistory(
 	ctx context.Context,
 	req *chatv1.GetChatHistoryRequest,
@@ -118,7 +102,7 @@ func (s *serverAPI) SendMessage(
 ) (*chatv1.SendMessageResponse, error) {
 	senderID, ok := interceptors.UserIDFromContext(ctx)
 	if !ok {
-		return nil, status.Error(codes.Internal, "failed to get user id from context")
+		return nil, status.Error(codes.Unauthenticated, "failed to get user id from context")
 	}
 
 	if err := validateSendMessage(req); err != nil {
@@ -131,6 +115,30 @@ func (s *serverAPI) SendMessage(
 	}
 
 	return &chatv1.SendMessageResponse{MsgId: msgID}, nil
+}
+
+func (s *serverAPI) DeleteMessage(
+	ctx context.Context,
+	req *chatv1.DeleteMessageRequest,
+) (*chatv1.DeleteMessageResponse, error) {
+	if err := validateDeleteMessage(req); err != nil {
+		return nil, err
+	}
+
+	requestorID, ok := interceptors.UserIDFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "failed to get user id from context")
+	}
+
+	err := s.chat.DeleteMessage(ctx, req.MsgId, req.ChatId, requestorID)
+	if err != nil {
+		if errors.Is(err, chatservice.ErrPermissionDenied) {
+			return nil, status.Error(codes.PermissionDenied, "permission denied")
+		}
+		return nil, status.Error(codes.Internal, "internal error")
+	}
+
+	return &chatv1.DeleteMessageResponse{Success: true}, nil
 }
 
 // ---Validators for grpc Handlers---

@@ -24,6 +24,7 @@ func setupTest(t *testing.T) (
 	*mocks.MockMessageSaver,
 	*mocks.MockMessageProvider,
 	*mocks.MockSSOProvider,
+	*mocks.MockChatCache,
 ) {
 	ctrl := gomock.NewController(t)
 
@@ -32,13 +33,27 @@ func setupTest(t *testing.T) (
 	messageSaver := mocks.NewMockMessageSaver(ctrl)
 	messageProvider := mocks.NewMockMessageProvider(ctrl)
 	ssoProvider := mocks.NewMockSSOProvider(ctrl)
+	chatCache := mocks.NewMockChatCache(ctrl)
 
 	// Используем логгер, который пишет "в никуда", чтобы не засорять консоль при тестах
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 
-	chat := chatservice.New(logger, chatSaver, chatProvider, messageSaver, messageProvider, ssoProvider)
+	chat := chatservice.New(logger,
+		chatSaver,
+		chatProvider,
+		messageSaver,
+		messageProvider,
+		ssoProvider,
+		chatCache,
+	)
 
-	return chat, chatSaver, chatProvider, messageSaver, messageProvider, ssoProvider
+	return chat,
+		chatSaver,
+		chatProvider,
+		messageSaver,
+		messageProvider,
+		ssoProvider,
+		chatCache
 }
 
 // --- ТЕСТЫ ---
@@ -107,7 +122,7 @@ func TestChat_CreateChat(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			chat, chatSaver, _, _, _, sso := setupTest(t)
+			chat, chatSaver, _, _, _, sso, _ := setupTest(t)
 			tt.mockSetup(sso, chatSaver)
 
 			id, err := chat.CreateChat(ctx, tt.members)
@@ -128,7 +143,7 @@ func TestChat_DeleteChat(t *testing.T) {
 	chatID := int64(1)
 	errInternal := errors.New("internal error")
 
-	chat, chatSaver, _, _, _, _ := setupTest(t)
+	chat, chatSaver, _, _, _, _, _ := setupTest(t)
 
 	// Сценарий 1: Успех
 	chatSaver.EXPECT().DeleteChat(ctx, chatID).Return(nil)
@@ -172,7 +187,7 @@ func TestChat_SendMessage(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			chat, _, _, msgSaver, _, _ := setupTest(t)
+			chat, _, _, msgSaver, _, _, _ := setupTest(t)
 			tt.mockSetup(msgSaver)
 
 			msgID, err := chat.SendMessage(ctx, int64(1), int64(2), "hello")
@@ -255,7 +270,7 @@ func TestChat_DeleteMessage(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			chat, _, _, msgSaver, msgProv, _ := setupTest(t)
+			chat, _, _, msgSaver, msgProv, _, _ := setupTest(t)
 			tt.mockSetup(msgProv, msgSaver)
 
 			err := chat.DeleteMessage(ctx, msgID, chatID, tt.requestor)
@@ -335,7 +350,7 @@ func TestChat_GetChatHistory(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			chat, _, chatProv, _, msgProv, _ := setupTest(t)
+			chat, _, chatProv, _, msgProv, _, _ := setupTest(t)
 			tt.mockSetup(chatProv, msgProv)
 
 			msgs, err := chat.GetChatHistory(ctx, chatID, requestorID, limit, offset)

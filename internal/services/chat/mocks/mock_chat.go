@@ -56,6 +56,59 @@ func (mr *MockSSOProviderMockRecorder) IsUserExists(ctx, userID any) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsUserExists", reflect.TypeOf((*MockSSOProvider)(nil).IsUserExists), ctx, userID)
 }
 
+// MockChatCache is a mock of ChatCache interface.
+type MockChatCache struct {
+	ctrl     *gomock.Controller
+	recorder *MockChatCacheMockRecorder
+	isgomock struct{}
+}
+
+// MockChatCacheMockRecorder is the mock recorder for MockChatCache.
+type MockChatCacheMockRecorder struct {
+	mock *MockChatCache
+}
+
+// NewMockChatCache creates a new mock instance.
+func NewMockChatCache(ctrl *gomock.Controller) *MockChatCache {
+	mock := &MockChatCache{ctrl: ctrl}
+	mock.recorder = &MockChatCacheMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockChatCache) EXPECT() *MockChatCacheMockRecorder {
+	return m.recorder
+}
+
+// CheckChatMember mocks base method.
+func (m *MockChatCache) CheckChatMember(ctx context.Context, chatID, userID int64) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckChatMember", ctx, chatID, userID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CheckChatMember indicates an expected call of CheckChatMember.
+func (mr *MockChatCacheMockRecorder) CheckChatMember(ctx, chatID, userID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckChatMember", reflect.TypeOf((*MockChatCache)(nil).CheckChatMember), ctx, chatID, userID)
+}
+
+// SetChatMember mocks base method.
+func (m *MockChatCache) SetChatMember(ctx context.Context, chatID, userID int64, isMember bool) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetChatMember", ctx, chatID, userID, isMember)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetChatMember indicates an expected call of SetChatMember.
+func (mr *MockChatCacheMockRecorder) SetChatMember(ctx, chatID, userID, isMember any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetChatMember", reflect.TypeOf((*MockChatCache)(nil).SetChatMember), ctx, chatID, userID, isMember)
+}
+
 // MockChatSaver is a mock of ChatSaver interface.
 type MockChatSaver struct {
 	ctrl     *gomock.Controller

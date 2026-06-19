@@ -9,12 +9,16 @@ import (
 )
 
 type Config struct {
-	Env         string     `yaml:"env" env-default:"local"`
-	PostgresDSN string     `yaml:"postgres_dsn" env-required:"./data"`
-	GRPC        GRPCConfig `yaml:"grpc"`
-	SSOAddr     string     `yaml:"sso_address"`
-	JWTSecret   string     `yaml:"jwt_secret"`
+	Env         string        `yaml:"env" env-default:"local"`
+	PostgresDSN string        `yaml:"postgres_dsn" env-required:"./data"`
+	GRPC        GRPCConfig    `yaml:"grpc"`
+	SSOAddr     string        `yaml:"sso_address"`
+	JWTSecret   string        `yaml:"jwt_secret"`
+	RedisUrl    string        `yaml:"redis_url"`
+	RedisTTL    time.Duration `yaml:"redis_ttl"`
 }
+
+// TODO: RedisConfig
 
 type GRPCConfig struct {
 	Port    int           `yaml:"port"`

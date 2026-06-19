@@ -31,6 +31,8 @@ func main() {
 		cfg.PostgresDSN,
 		cfg.SSOAddr,
 		cfg.JWTSecret,
+		cfg.RedisUrl,
+		cfg.RedisTTL,
 	)
 
 	go application.GRPCSrv.MustRun()

@@ -5,12 +5,14 @@ import (
 	ssogrpc "chat/internal/clients/sso/grpc"
 	chatservice "chat/internal/services/chat"
 	"chat/internal/storage/postgres"
+	appredis "chat/internal/storage/redis"
 	"context"
 	"time"
 
 	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 )
 
 type App struct {
@@ -24,6 +26,8 @@ func New(
 	postgresDSN string,
 	ssoAddr string,
 	jwtSecret string,
+	redisUrl string,
+	redisTTL time.Duration,
 ) *App {
 	ctx := context.Background()
 	pool := MustSetupPostgres(ctx, postgresDSN)
@@ -36,13 +40,17 @@ func New(
 		panic(err)
 	}
 
+	redisCli := MustSetupRedis(ctx, redisUrl)
+	cache := appredis.New(redisCli, redisTTL)
+
 	chatService := chatservice.New(log,
 		storage,
 		storage,
 		storage,
 		storage,
 		ssoClient,
-	) // need storage
+		cache,
+	)
 	grpcApp := grpcapp.New(log, chatService, grpcPort, jwtSecret)
 
 	app := &App{
@@ -52,6 +60,10 @@ func New(
 	app.closers = append(app.closers, func() {
 		log.Info("closing postgres connection pool")
 		pool.Close()
+	})
+	app.closers = append(app.closers, func() {
+		log.Info("closing redis client")
+		redisCli.Close()
 	})
 	return app
 }
@@ -86,4 +98,27 @@ func setupPostgres(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
 	}
 
 	return pool, nil
+}
+
+func setupRedis(ctx context.Context, redisUrl string) (*redis.Client, error) {
+	opt, err := redis.ParseURL(redisUrl)
+	if err != nil {
+		return nil, err
+	}
+	redisCli := redis.NewClient(opt)
+
+	if err := redisCli.Ping(ctx).Err(); err != nil {
+		return nil, err
+	}
+
+	return redisCli, err
+}
+
+func MustSetupRedis(ctx context.Context, redisUrl string) *redis.Client {
+	client, err := setupRedis(ctx, redisUrl)
+	if err != nil {
+		panic("Failed to setup redis")
+	}
+
+	return client
 }

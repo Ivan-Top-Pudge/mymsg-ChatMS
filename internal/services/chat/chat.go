@@ -8,6 +8,12 @@ import (
 	"log/slog"
 )
 
+var (
+	ErrUserNotFound     = errors.New("user does not exist")
+	ErrPermissionDenied = errors.New("permission denied")
+	ErrCacheMiss        = errors.New("cache miss")
+)
+
 // Структура сервиса Chat с бизнес логикой
 type Chat struct {
 	log             *slog.Logger
@@ -16,10 +22,16 @@ type Chat struct {
 	messageSaver    MessageSaver
 	messageProvider MessageProvider
 	ssoProvider     SSOProvider
+	chatCache       ChatCache
 }
 
 type SSOProvider interface {
 	IsUserExists(ctx context.Context, userID int64) (bool, error)
+}
+
+type ChatCache interface {
+	CheckChatMember(ctx context.Context, chatID int64, userID int64) (bool, error)
+	SetChatMember(ctx context.Context, chatID int64, userID int64, isMember bool) error
 }
 
 // Интерфейсы для логики storage`а
@@ -53,6 +65,7 @@ func New(
 	messageSaver MessageSaver,
 	messageProvider MessageProvider,
 	ssoProvider SSOProvider,
+	chatCache ChatCache,
 ) *Chat {
 	return &Chat{
 		log:             log,
@@ -61,13 +74,9 @@ func New(
 		messageSaver:    messageSaver,
 		messageProvider: messageProvider,
 		ssoProvider:     ssoProvider,
+		chatCache:       chatCache,
 	}
 }
-
-var (
-	ErrUserNotFound     = errors.New("user does not exist")
-	ErrPermissionDenied = errors.New("permission denied")
-)
 
 // Реализация функций Бизнес-логики микросервиса
 

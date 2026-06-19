@@ -135,18 +135,18 @@ func TestStorage_SaveMessage(t *testing.T) {
 			text:     "test",
 			expError: false,
 		},
-		/*{
+		{
 			name:     "fail_invalid_chat_id",
 			chatID:   9999, // invalid chat
 			senderID: 1,
 			text:     "Ghost message",
 			expError: true,
-		},*/ // TODO: Fix invalid chat id validation
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			msgID, err := storage.SaveMessage(ctx, chatID, tt.senderID, tt.text)
+			msgID, err := storage.SaveMessage(ctx, tt.chatID, tt.senderID, tt.text)
 
 			if tt.expError {
 				require.Error(t, err)
@@ -285,6 +285,83 @@ func TestStorage_IsChatMember(t *testing.T) {
 			isMember, err := storage.IsChatMember(ctx, tt.chatID, tt.userID)
 			require.NoError(t, err)
 			assert.Equal(t, tt.expected, isMember)
+		})
+	}
+}
+
+func TestStorage_DeleteChat(t *testing.T) {
+	clearDB(t)
+	ctx := context.Background()
+	storage := New(testPool)
+
+	// 1. Подготавливаем данные: создаем чат и сообщение в нем
+	chatID, err := storage.CreateChat(ctx, []int64{1, 2})
+	require.NoError(t, err)
+
+	_, err = storage.SaveMessage(ctx, chatID, 1, "test message to be deleted")
+	require.NoError(t, err)
+
+	// 2. Выполняем тестируемый метод (удаляем чат)
+	err = storage.DeleteChat(ctx, chatID)
+	require.NoError(t, err)
+
+	// 3. Проверяем, что чата больше нет
+	exists, err := storage.ChatExists(ctx, chatID)
+	require.NoError(t, err)
+	assert.False(t, exists, "Chat should be deleted from DB")
+
+	// 4. Проверяем каскадное удаление (ON DELETE CASCADE) для сообщений
+	var msgCount int
+	err = testPool.QueryRow(ctx, "SELECT count(*) FROM messages WHERE chat_id = $1", chatID).Scan(&msgCount)
+	require.NoError(t, err)
+	assert.Equal(t, 0, msgCount, "Messages should be deleted via ON DELETE CASCADE")
+
+	// 5. Проверяем каскадное удаление (ON DELETE CASCADE) для участников
+	var membersCount int
+	err = testPool.QueryRow(ctx, "SELECT count(*) FROM chat_members WHERE chat_id = $1", chatID).Scan(&membersCount)
+	require.NoError(t, err)
+	assert.Equal(t, 0, membersCount, "Chat members should be deleted via ON DELETE CASCADE")
+}
+
+func TestStorage_ChatExists(t *testing.T) {
+	clearDB(t)
+	ctx := context.Background()
+	storage := New(testPool)
+
+	// Создаем тестовый чат
+	chatID, err := storage.CreateChat(ctx, []int64{1, 2})
+	require.NoError(t, err)
+
+	tests := []struct {
+		name     string
+		chatID   int64
+		expected bool
+		expError bool
+	}{
+		{
+			name:     "existing_chat",
+			chatID:   chatID,
+			expected: true,
+			expError: false,
+		},
+		{
+			name:     "non_existing_chat",
+			chatID:   9999, // Заведомо несуществующий ID
+			expected: false,
+			expError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			exists, err := storage.ChatExists(ctx, tt.chatID)
+
+			if tt.expError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tt.expected, exists)
+			}
 		})
 	}
 }

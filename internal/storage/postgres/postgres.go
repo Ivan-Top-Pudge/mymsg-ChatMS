@@ -131,7 +131,7 @@ func (s *Storage) DeleteMessage(ctx context.Context, msgID int64, chatID int64) 
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
-
+	// TODO: можно добавить кастомные ошибки
 	if tag.RowsAffected() == 0 {
 		return fmt.Errorf("%s: message not found", op)
 	}

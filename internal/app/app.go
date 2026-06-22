@@ -63,7 +63,11 @@ func New(
 	})
 	app.closers = append(app.closers, func() {
 		log.Info("closing redis client")
-		redisCli.Close()
+		if err := redisCli.Close(); err != nil {
+			log.Error("Error closing Redis client: ", slog.Any("error", err))
+		} else {
+			log.Info("Redis client closed succesfully")
+		}
 	})
 	return app
 }

@@ -32,7 +32,9 @@ func (s *Storage) CreateChat(
 	// defer guarantees that transation will be done fully
 	// or canceled
 	// If we had already called Commit(), Rollback will be ignored
-	defer tx.Rollback(ctx)
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
 
 	var chatID int64
 	// Create chat in db

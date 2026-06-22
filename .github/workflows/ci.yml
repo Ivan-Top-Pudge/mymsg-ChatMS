@@ -19,10 +19,11 @@ jobs:
       with:
         go-version: '1.26'
 
-    - name: Run Linter
-      uses: golangci/golangci-lint-action@v4
+    - name: Run GoLang Linter
+      uses: golangci/golangci-lint-action@v7
       with:
-        version: latest
+          # Use v2.11 or later for native Go 1.26 binary support
+          version: v2.11
 
     - name: Run Tests
       run: go test -v ./...

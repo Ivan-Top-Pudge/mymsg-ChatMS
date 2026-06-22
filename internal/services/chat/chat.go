@@ -129,11 +129,36 @@ func (c *Chat) DeleteChat(ctx context.Context, chatID int64) error {
 func (c *Chat) SendMessage(ctx context.Context, chatID int64, senderID int64, text string) (int64, error) {
 	const op = "chat.SendMessage"
 
+	isMember, err := c.chatCache.CheckChatMember(ctx, chatID, senderID)
+
+	if err != nil {
+		if !errors.Is(err, ErrCacheMiss) {
+			c.log.Warn("failed to check in redis, checking in db", slog.String("error", err.Error()))
+		}
+		// storage request
+		isMember, err = c.chatProvider.IsChatMember(ctx, chatID, senderID)
+		if err != nil {
+			c.log.Error("failed to check chat member in DB", slog.String("error", err.Error()))
+			return 0, fmt.Errorf("%s: %w", op, err)
+		}
+
+		// кэшируем запрос, если удачно сходили в бд
+		err = c.chatCache.SetChatMember(ctx, chatID, senderID, isMember)
+		if err != nil {
+			c.log.Warn("failed to save chat member to cache", slog.String("error", err.Error()))
+		}
+	}
+
+	if !isMember {
+		return 0, ErrPermissionDenied
+	}
+
 	msgID, err := c.messageSaver.SaveMessage(ctx, chatID, senderID, text)
 	if err != nil {
-		c.log.Error("failed to send message", slog.String("error", err.Error()))
-		return 0, err
+		c.log.Error("failed to save message in db", slog.String("error", err.Error()))
+		return 0, fmt.Errorf("%s: %w", op, err)
 	}
+
 	return msgID, nil
 }
 

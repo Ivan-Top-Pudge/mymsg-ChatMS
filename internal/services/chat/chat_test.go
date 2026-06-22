@@ -158,45 +158,105 @@ func TestChat_DeleteChat(t *testing.T) {
 
 func TestChat_SendMessage(t *testing.T) {
 	ctx := context.Background()
-	errInternal := errors.New("db error")
+	errInternal := errors.New("internal error")
 
 	tests := []struct {
-		name        string
-		mockSetup   func(msgSaver *mocks.MockMessageSaver)
+		name     string
+		chatID   int64
+		senderID int64
+		text     string
+		// Передаем нужные моки в setup
+		mockSetup   func(provider *mocks.MockChatProvider, saver *mocks.MockMessageSaver, cache *mocks.MockChatCache)
 		expectedID  int64
 		expectError bool
+		errTarget   error
 	}{
 		{
-			name: "Success",
-			mockSetup: func(msgSaver *mocks.MockMessageSaver) {
-				msgSaver.EXPECT().SaveMessage(ctx, int64(1), int64(2), "hello").Return(int64(100), nil)
+			name:     "Success - Cache Hit (Быстрый путь)",
+			chatID:   1,
+			senderID: 2,
+			text:     "hello",
+			mockSetup: func(provider *mocks.MockChatProvider, saver *mocks.MockMessageSaver, cache *mocks.MockChatCache) {
+				// 1. Кэш сразу отвечает: "Пользователь есть в чате"
+				cache.EXPECT().CheckChatMember(ctx, int64(1), int64(2)).Return(true, nil)
+
+				// ВАЖНО: Мы НЕ ожидаем вызова БД (provider.IsChatMember) и записи в кэш!
+
+				// 2. Сразу сохраняем сообщение
+				saver.EXPECT().SaveMessage(ctx, int64(1), int64(2), "hello").Return(int64(42), nil)
 			},
-			expectedID:  100,
+			expectedID:  42,
 			expectError: false,
 		},
 		{
-			name: "Message Saver Error",
-			mockSetup: func(msgSaver *mocks.MockMessageSaver) {
-				// Имитируем ошибку при сохранении сообщения в базу
-				msgSaver.EXPECT().SaveMessage(ctx, int64(1), int64(2), "hello").Return(int64(0), errInternal)
+			name:     "Success - Cache Miss -> DB Hit (Долгий путь)",
+			chatID:   1,
+			senderID: 2,
+			text:     "hello",
+			mockSetup: func(provider *mocks.MockChatProvider, saver *mocks.MockMessageSaver, cache *mocks.MockChatCache) {
+				// 1. Кэш пустой
+				cache.EXPECT().CheckChatMember(ctx, int64(1), int64(2)).Return(false, chatservice.ErrCacheMiss)
+				// 2. Идем в базу данных, юзер там есть
+				provider.EXPECT().IsChatMember(ctx, int64(1), int64(2)).Return(true, nil)
+				// 3. Сохраняем результат в кэш
+				cache.EXPECT().SetChatMember(ctx, int64(1), int64(2), true).Return(nil)
+				// 4. Сохраняем сообщение
+				saver.EXPECT().SaveMessage(ctx, int64(1), int64(2), "hello").Return(int64(42), nil)
+			},
+			expectedID:  42,
+			expectError: false,
+		},
+		{
+			name:     "Permission Denied - User not in chat",
+			chatID:   1,
+			senderID: 3,
+			text:     "hello",
+			mockSetup: func(provider *mocks.MockChatProvider, saver *mocks.MockMessageSaver, cache *mocks.MockChatCache) {
+				// 1. Кэш пустой
+				cache.EXPECT().CheckChatMember(ctx, int64(1), int64(3)).Return(false, chatservice.ErrCacheMiss)
+				// 2. Идем в базу, юзера там НЕТ
+				provider.EXPECT().IsChatMember(ctx, int64(1), int64(3)).Return(false, nil)
+				// 3. Сохраняем этот факт в кэш (negative cache)
+				cache.EXPECT().SetChatMember(ctx, int64(1), int64(3), false).Return(nil)
+
+				// ВАЖНО: saver.EXPECT().SaveMessage НЕ должен вызываться
 			},
 			expectedID:  0,
 			expectError: true,
+			errTarget:   chatservice.ErrPermissionDenied,
+		},
+		{
+			name:     "Message Saver Error",
+			chatID:   1,
+			senderID: 2,
+			text:     "hello",
+			mockSetup: func(provider *mocks.MockChatProvider, saver *mocks.MockMessageSaver, cache *mocks.MockChatCache) {
+				// Для разнообразия: кэш ответил успешно, но база данных сообщений упала
+				cache.EXPECT().CheckChatMember(ctx, int64(1), int64(2)).Return(true, nil)
+				saver.EXPECT().SaveMessage(ctx, int64(1), int64(2), "hello").Return(int64(0), errInternal)
+			},
+			expectedID:  0,
+			expectError: true,
+			errTarget:   errInternal,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			chat, _, _, msgSaver, _, _, _ := setupTest(t)
-			tt.mockSetup(msgSaver)
+			// Вытаскиваем нужные моки из твоего setupTest
+			// Подставь правильные индексы, если они у тебя возвращаются в другом порядке!
+			chatApp, _, chatProvider, msgSaver, _, _, cache := setupTest(t)
 
-			msgID, err := chat.SendMessage(ctx, int64(1), int64(2), "hello")
+			tt.mockSetup(chatProvider, msgSaver, cache)
+
+			id, err := chatApp.SendMessage(ctx, tt.chatID, tt.senderID, tt.text)
 
 			if tt.expectError {
 				require.Error(t, err)
+				require.ErrorIs(t, err, tt.errTarget)
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tt.expectedID, msgID)
+				require.Equal(t, tt.expectedID, id)
 			}
 		})
 	}

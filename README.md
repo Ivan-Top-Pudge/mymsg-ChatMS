@@ -1,4 +1,3 @@
-[README(1).md](https://github.com/user-attachments/files/33834158/README.1.md)
 # mymsg-ChatMS
 
 [![CI Pipeline](https://github.com/Ivan-Top-Pudge/mymsg-ChatMS/actions/workflows/ci.yml/badge.svg)](https://github.com/Ivan-Top-Pudge/mymsg-ChatMS/actions/workflows/ci.yml)
